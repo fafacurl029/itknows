@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: it-kb-cloud
+    env: docker
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: it-kb-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: APP_ORIGIN
+        value: https://it-kb-cloud.onrender.com
+
+databases:
+  - name: it-kb-db
+    plan: free
+    databaseName: it_kb
+    user: it_kb_user

@@ -1,0 +1,193 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleName {
+  ADMIN
+  APPROVER
+  CONTRIBUTOR
+  READER
+}
+
+enum ArticleStatus {
+  DRAFT
+  IN_REVIEW
+  PUBLISHED
+  DEPRECATED
+}
+
+enum ArticleType {
+  RUNBOOK
+  TROUBLESHOOTING
+  SOP
+  HOW_TO
+  ARCHITECTURE
+  CHANGE_PROCEDURE
+}
+
+model User {
+  id           String      @id @default(uuid())
+  email        String      @unique
+  name         String?
+  passwordHash String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  roles        UserRole[]
+  spacesCreated Space[]    @relation("SpaceCreatedBy")
+  articlesCreated Article[] @relation("ArticleCreatedBy")
+  articlesUpdated Article[] @relation("ArticleUpdatedBy")
+  versionsCreated ArticleVersion[]
+  comments     Comment[]
+  auditEvents  AuditEvent[] @relation("AuditActor")
+
+  @@index([email])
+}
+
+model Role {
+  id   String   @id @default(uuid())
+  name RoleName @unique
+
+  users UserRole[]
+}
+
+model UserRole {
+  userId String
+  roleId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+}
+
+model Space {
+  id          String     @id @default(uuid())
+  name        String
+  slug        String     @unique
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  createdById String
+  createdBy   User       @relation("SpaceCreatedBy", fields: [createdById], references: [id])
+
+  collections Collection[]
+  articles    Article[]
+}
+
+model Collection {
+  id          String   @id @default(uuid())
+  spaceId     String
+  name        String
+  slug        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  space   Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  articles Article[]
+
+  @@unique([spaceId, slug])
+  @@index([spaceId])
+}
+
+model Article {
+  id            String        @id @default(uuid())
+  spaceId       String
+  collectionId  String?
+  title         String
+  slug          String
+  type          ArticleType
+  status        ArticleStatus @default(DRAFT)
+  content       String        @default("")
+  ownerId       String?
+  lastVerifiedAt DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  createdById   String
+  updatedById   String?
+
+  space       Space       @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  collection  Collection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+
+  createdBy   User @relation("ArticleCreatedBy", fields: [createdById], references: [id])
+  updatedBy   User? @relation("ArticleUpdatedBy", fields: [updatedById], references: [id])
+
+  versions    ArticleVersion[]
+  tags        ArticleTag[]
+  comments    Comment[]
+
+  @@unique([spaceId, slug])
+  @@index([spaceId, collectionId])
+  @@index([status])
+}
+
+model ArticleVersion {
+  id            String   @id @default(uuid())
+  articleId     String
+  versionNumber Int
+  title         String
+  content       String
+  changeSummary String?
+  createdAt     DateTime @default(now())
+  createdById   String
+
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  createdBy User    @relation(fields: [createdById], references: [id])
+
+  @@unique([articleId, versionNumber])
+  @@index([articleId])
+}
+
+model Tag {
+  id   String @id @default(uuid())
+  name String @unique
+  articles ArticleTag[]
+}
+
+model ArticleTag {
+  articleId String
+  tagId     String
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([articleId, tagId])
+  @@index([tagId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  articleId String
+  userId    String
+  body      String
+  createdAt DateTime @default(now())
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([articleId])
+}
+
+model AuditEvent {
+  id         String   @id @default(uuid())
+  action     String
+  entityType String
+  entityId   String
+  meta       Json?
+  createdAt  DateTime @default(now())
+  actorId    String?
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([entityType, entityId])
+}

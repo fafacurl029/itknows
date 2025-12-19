@@ -1,0 +1,13 @@
+{
+  "name": "it-kb-cloud",
+  "private": true,
+  "workspaces": [
+    "apps/server",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "npm -w apps/server run dev",
+    "build": "npm -w apps/web run build && npm -w apps/server run build",
+    "start": "npm -w apps/server run start"
+  }
+}
