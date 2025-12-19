@@ -1,4 +1,5 @@
 import { Router } from "express";
+import type { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import rateLimit from "express-rate-limit";
 import { prisma } from "../prisma";
@@ -6,6 +7,8 @@ import { signJwt } from "../auth/jwt";
 import { BootstrapSchema, LoginSchema } from "../validators";
 
 export const authRouter = Router();
+
+type UserRoleWithRole = Prisma.UserRoleGetPayload<{ include: { role: true } }>;
 
 const authLimiter = rateLimit({
   windowMs: 60_000,
@@ -77,7 +80,7 @@ authRouter.post("/bootstrap", authLimiter, async (req, res) => {
 
   const token = signJwt({
     sub: user.id,
-    roles: user.roles.map((ur) => ur.role.name),
+    roles: user.roles.map((ur: UserRoleWithRole) => ur.role.name),
   });
 
   res.cookie("auth", token, {
@@ -93,7 +96,7 @@ authRouter.post("/bootstrap", authLimiter, async (req, res) => {
       id: user.id,
       email: user.email,
       name: user.name,
-      roles: user.roles.map((ur) => ur.role.name),
+      roles: user.roles.map((ur: UserRoleWithRole) => ur.role.name),
     },
   });
 });
@@ -114,7 +117,7 @@ authRouter.post("/login", authLimiter, async (req, res) => {
 
   const token = signJwt({
     sub: user.id,
-    roles: user.roles.map((ur) => ur.role.name),
+    roles: user.roles.map((ur: UserRoleWithRole) => ur.role.name),
   });
 
   res.cookie("auth", token, {
@@ -140,7 +143,7 @@ authRouter.post("/login", authLimiter, async (req, res) => {
       id: user.id,
       email: user.email,
       name: user.name,
-      roles: user.roles.map((ur) => ur.role.name),
+      roles: user.roles.map((ur: UserRoleWithRole) => ur.role.name),
     },
   });
 });
@@ -167,7 +170,7 @@ authRouter.get("/me", async (req, res) => {
         id: user.id,
         email: user.email,
         name: user.name,
-        roles: user.roles.map((ur) => ur.role.name),
+        roles: user.roles.map((ur: UserRoleWithRole) => ur.role.name),
       },
     });
   } catch {

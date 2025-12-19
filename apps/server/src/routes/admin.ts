@@ -1,9 +1,14 @@
 import { Router } from "express";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import { requireAuth, requireRole, AuthedRequest } from "../auth/middleware";
 import { UpdateUserRolesSchema } from "../validators";
 
 export const adminRouter = Router();
+
+type UserWithRoles = Prisma.UserGetPayload<{ include: { roles: { include: { role: true } } } }>;
+
+type UserRoleWithRole = Prisma.UserRoleGetPayload<{ include: { role: true } }>;
 
 adminRouter.use(requireAuth, requireRole(["ADMIN"]));
 
@@ -14,12 +19,12 @@ adminRouter.get("/users", async (_req, res) => {
   });
 
   res.json({
-    users: users.map((u) => ({
+    users: users.map((u: UserWithRoles) => ({
       id: u.id,
       email: u.email,
       name: u.name,
       createdAt: u.createdAt,
-      roles: u.roles.map((ur) => ur.role.name),
+      roles: u.roles.map((ur: UserRoleWithRole) => ur.role.name),
     })),
   });
 });

@@ -1,10 +1,39 @@
 import { Router } from "express";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import { requireAuth, requireRole, AuthedRequest } from "../auth/middleware";
 import { slugify } from "../utils/slug";
 import { SpaceSchema, CollectionSchema, ArticleCreateSchema, ArticleUpdateSchema, CommentSchema } from "../validators";
 
 export const contentRouter = Router();
+
+type ArticleTagWithTag = Prisma.ArticleTagGetPayload<{ include: { tag: true } }>;
+
+type ArticleListItem = Prisma.ArticleGetPayload<{
+  include: {
+    tags: { include: { tag: true } };
+    createdBy: { select: { id: true; email: true; name: true } };
+    updatedBy: { select: { id: true; email: true; name: true } };
+    collection: true;
+    space: true;
+  };
+}>;
+
+type ArticleDetail = Prisma.ArticleGetPayload<{
+  include: {
+    tags: { include: { tag: true } };
+    comments: {
+      include: { user: { select: { id: true; email: true; name: true } } };
+    };
+    versions: {
+      include: { createdBy: { select: { id: true; email: true; name: true } } };
+    };
+    space: true;
+    collection: true;
+    createdBy: { select: { id: true; email: true; name: true } };
+    updatedBy: { select: { id: true; email: true; name: true } };
+  };
+}>;
 
 contentRouter.get("/spaces", requireAuth, async (_req, res) => {
   const spaces = await prisma.space.findMany({
@@ -100,9 +129,9 @@ contentRouter.get("/articles", requireAuth, async (req, res) => {
   });
 
   res.json({
-    articles: articles.map((a) => ({
+    articles: (articles as ArticleListItem[]).map((a) => ({
       ...a,
-      tags: a.tags.map((t) => t.tag.name),
+      tags: a.tags.map((t: ArticleTagWithTag) => t.tag.name),
     })),
   });
 });
@@ -126,7 +155,7 @@ contentRouter.get("/articles/:id", requireAuth, async (req, res) => {
   res.json({
     article: {
       ...article,
-      tags: article.tags.map((t) => t.tag.name),
+      tags: (article as ArticleDetail).tags.map((t: ArticleTagWithTag) => t.tag.name),
     },
   });
 });
