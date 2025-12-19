@@ -2,6 +2,7 @@ services:
   - type: web
     name: it-kb-cloud
     env: docker
+    plan: free
     dockerfilePath: ./Dockerfile
     autoDeploy: true
     healthCheckPath: /api/health
