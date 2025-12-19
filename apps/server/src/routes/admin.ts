@@ -45,13 +45,14 @@ adminRouter.patch("/users/:id/roles", async (req: AuthedRequest, res) => {
   await prisma.userRole.deleteMany({ where: { userId } });
 
   // Re-assign roles
-  for (const r of roles) {
-    await prisma.userRole.create({
-      data: {
-        userId,
-        role: { connect: { name: r } },
-      },
-    });
+  fawait prisma.userRole.create({
+  data: {
+    userId,
+    role: role as "ADMIN" | "APPROVER" | "CONTRIBUTOR" | "READER"
+  }
+});
+
+
   }
 
   await prisma.auditEvent.create({
